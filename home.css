@@ -323,7 +323,7 @@
     min-height: 525px;
   }
 }.u-section-3 .u-sheet-1 {
-  min-height: 839px;
+  min-height: 840px;
 }
 
 .u-section-3 .u-text-1 {
@@ -336,8 +336,8 @@
 }
 
 .u-section-3 .u-list-1 {
-  margin-top: 26px;
-  margin-bottom: 36px;
+  margin-top: 33px;
+  margin-bottom: 29px;
 }
 
 .u-section-3 .u-repeater-1 {
@@ -1502,7 +1502,7 @@
 .u-section-7 .u-image-3 {
   width: 169px;
   height: 179px;
-  background-image: url("/images/logo.png");
+  background-image: url("images/logo.png");
   background-position: 50% 50%;
   margin: -6px auto 0 0;
 }

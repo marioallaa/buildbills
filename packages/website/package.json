@@ -1,0 +1,9 @@
+{
+  "name": "@buildbills/website",
+  "version": "1.0.0",
+  "description": "BuildBills marketing website",
+  "private": true,
+  "scripts": {
+    "serve": "npx http-server . -p 8080"
+  }
+}

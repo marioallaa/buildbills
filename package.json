@@ -1,0 +1,53 @@
+{
+  "name": "buildbills-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BuildBills - Invoice and expense management platform",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "bootstrap": "npm install && npm run setup",
+    "setup": "echo 'Setting up BuildBills monorepo...'",
+    "mobile": "cd apps/mobile && npm start",
+    "mobile:ios": "cd apps/mobile && npm run ios",
+    "mobile:android": "cd apps/mobile && npm run android",
+    "firebase:deploy": "cd packages/firebase-functions && npm run deploy",
+    "firebase:emulator": "cd packages/firebase-functions && npm run emulator",
+    "test": "npm run test:functions && npm run test:mobile",
+    "test:functions": "cd packages/firebase-functions && npm test",
+    "test:mobile": "cd apps/mobile && npm test",
+    "lint": "npm run lint:functions && npm run lint:mobile",
+    "lint:functions": "cd packages/firebase-functions && npm run lint",
+    "lint:mobile": "cd apps/mobile && npm run lint",
+    "clean": "rm -rf node_modules packages/*/node_modules apps/*/node_modules"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marioallaa/buildbills.git"
+  },
+  "keywords": [
+    "invoice",
+    "expense-tracking",
+    "mobile-app",
+    "react-native",
+    "firebase"
+  ],
+  "author": "BuildBills Team",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/marioallaa/buildbills/issues"
+  },
+  "homepage": "https://github.com/marioallaa/buildbills#readme",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.45.0",
+    "typescript": "^5.1.6"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

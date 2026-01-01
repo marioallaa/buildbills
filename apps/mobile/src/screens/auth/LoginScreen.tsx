@@ -2,16 +2,18 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../navigation/AppNavigator';
+import { useAuth } from '../../hooks/useAuth';
+import { Button, Input } from '../../components';
+import { colors } from '../../theme';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
@@ -20,25 +22,51 @@ interface Props {
 }
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
+  const { signIn, loading, error, clearError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
+  const validateForm = (): boolean => {
+    let isValid = true;
+    
+    // Reset errors
+    setEmailError('');
+    setPasswordError('');
+    clearError();
+
+    // Email validation
+    if (!email.trim()) {
+      setEmailError('Email is required');
+      isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      setEmailError('Please enter a valid email');
+      isValid = false;
+    }
+
+    // Password validation
+    if (!password) {
+      setPasswordError('Password is required');
+      isValid = false;
+    } else if (password.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      isValid = false;
+    }
+
+    return isValid;
+  };
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter email and password');
+    if (!validateForm()) {
       return;
     }
 
-    setLoading(true);
     try {
-      // TODO: Implement Firebase authentication
-      console.log('Login with:', email, password);
-      Alert.alert('Success', 'Login functionality will be implemented with Firebase');
-    } catch (error) {
-      Alert.alert('Error', 'Login failed');
-    } finally {
-      setLoading(false);
+      await signIn(email.trim(), password);
+      // Navigation will be handled automatically by AuthContext
+    } catch (err: any) {
+      Alert.alert('Login Failed', err.message || 'Please check your credentials and try again');
     }
   };
 
@@ -47,53 +75,72 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}>
-        <View style={styles.content}>
-          <Text style={styles.title}>BuildBills</Text>
-          <Text style={styles.subtitle}>Sign in to continue</Text>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled">
+          <View style={styles.content}>
+            <Text style={styles.title}>BuildBills</Text>
+            <Text style={styles.subtitle}>Sign in to continue</Text>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor="#999"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-          />
+            {error && (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{error}</Text>
+              </View>
+            )}
 
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="#999"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoComplete="password"
-          />
+            <Input
+              label="Email"
+              placeholder="Enter your email"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              error={emailError}
+              editable={!loading}
+            />
 
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={handleLogin}
-            disabled={loading}>
-            <Text style={styles.loginButtonText}>
-              {loading ? 'Signing in...' : 'Sign In'}
-            </Text>
-          </TouchableOpacity>
+            <Input
+              label="Password"
+              placeholder="Enter your password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoComplete="password"
+              error={passwordError}
+              editable={!loading}
+            />
 
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ForgotPassword')}
-            style={styles.forgotPasswordButton}>
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
+            <Button
+              title="Sign In"
+              onPress={handleLogin}
+              disabled={loading}
+              loading={loading}
+              fullWidth
+              style={styles.loginButton}
+            />
 
-          <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.registerLink}>Sign Up</Text>
-            </TouchableOpacity>
+            <Button
+              title="Forgot Password?"
+              onPress={() => navigation.navigate('ForgotPassword')}
+              variant="ghost"
+              size="small"
+              style={styles.forgotButton}
+              disabled={loading}
+            />
+
+            <View style={styles.registerContainer}>
+              <Text style={styles.registerText}>Don't have an account? </Text>
+              <Button
+                title="Sign Up"
+                onPress={() => navigation.navigate('Register')}
+                variant="ghost"
+                size="small"
+                disabled={loading}
+              />
+            </View>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -102,72 +149,62 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   keyboardView: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
+    paddingVertical: 40,
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text,
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 32,
     textAlign: 'center',
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
+  errorBanner: {
+    backgroundColor: `${colors.error}20`,
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
+    padding: 12,
     marginBottom: 16,
-    backgroundColor: '#f9f9f9',
+    borderWidth: 1,
+    borderColor: colors.error,
+  },
+  errorBannerText: {
+    color: colors.error,
+    fontSize: 14,
+    textAlign: 'center',
   },
   loginButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
     marginTop: 8,
   },
-  loginButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  forgotPasswordButton: {
-    alignSelf: 'center',
+  forgotButton: {
     marginTop: 16,
-  },
-  forgotPasswordText: {
-    color: '#007AFF',
-    fontSize: 14,
+    alignSelf: 'center',
   },
   registerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 24,
   },
   registerText: {
-    color: '#666',
+    color: colors.textSecondary,
     fontSize: 14,
-  },
-  registerLink: {
-    color: '#007AFF',
-    fontSize: 14,
-    fontWeight: '600',
   },
 });
 

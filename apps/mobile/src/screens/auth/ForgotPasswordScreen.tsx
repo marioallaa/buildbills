@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   SafeAreaView,
   KeyboardAvoidingView,
@@ -12,6 +10,9 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../navigation/AppNavigator';
+import { useAuth } from '../../hooks/useAuth';
+import { Button, Input } from '../../components';
+import { colors } from '../../theme';
 
 type ForgotPasswordScreenNavigationProp = NativeStackNavigationProp<
   AuthStackParamList,
@@ -23,28 +24,42 @@ interface Props {
 }
 
 const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
+  const { resetPassword, loading } = useAuth();
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
+
+  const validateEmail = (): boolean => {
+    setEmailError('');
+
+    if (!email.trim()) {
+      setEmailError('Email is required');
+      return false;
+    }
+
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      setEmailError('Please enter a valid email');
+      return false;
+    }
+
+    return true;
+  };
 
   const handleResetPassword = async () => {
-    if (!email) {
-      Alert.alert('Error', 'Please enter your email address');
+    if (!validateEmail()) {
       return;
     }
 
-    setLoading(true);
     try {
-      // TODO: Implement Firebase password reset
-      console.log('Reset password for:', email);
+      await resetPassword(email.trim());
+      setEmailSent(true);
       Alert.alert(
-        'Success',
-        'Password reset email sent. Please check your inbox.',
+        'Email Sent',
+        'If an account exists with this email, you will receive password reset instructions.',
         [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
       );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to send reset email');
-    } finally {
-      setLoading(false);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to send reset email. Please try again.');
     }
   };
 
@@ -59,31 +74,43 @@ const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
             Enter your email address and we'll send you instructions to reset your password.
           </Text>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor="#999"
+          {emailSent && (
+            <View style={styles.successBanner}>
+              <Text style={styles.successBannerText}>
+                Reset instructions sent! Check your email.
+              </Text>
+            </View>
+          )}
+
+          <Input
+            label="Email"
+            placeholder="Enter your email"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
+            error={emailError}
+            editable={!loading && !emailSent}
           />
 
-          <TouchableOpacity
-            style={styles.resetButton}
+          <Button
+            title="Send Reset Email"
             onPress={handleResetPassword}
-            disabled={loading}>
-            <Text style={styles.resetButtonText}>
-              {loading ? 'Sending...' : 'Send Reset Email'}
-            </Text>
-          </TouchableOpacity>
+            disabled={loading || emailSent}
+            loading={loading}
+            fullWidth
+            style={styles.resetButton}
+          />
 
-          <TouchableOpacity
+          <Button
+            title="Back to Sign In"
             onPress={() => navigation.navigate('Login')}
-            style={styles.backButton}>
-            <Text style={styles.backButtonText}>Back to Sign In</Text>
-          </TouchableOpacity>
+            variant="ghost"
+            size="small"
+            style={styles.backButton}
+            disabled={loading}
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -93,7 +120,7 @@ const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   keyboardView: {
     flex: 1,
@@ -106,46 +133,36 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text,
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 32,
     textAlign: 'center',
     lineHeight: 20,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
+  successBanner: {
+    backgroundColor: `${colors.success}20`,
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
+    padding: 12,
     marginBottom: 16,
-    backgroundColor: '#f9f9f9',
+    borderWidth: 1,
+    borderColor: colors.success,
+  },
+  successBannerText: {
+    color: colors.success,
+    fontSize: 14,
+    textAlign: 'center',
   },
   resetButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
     marginTop: 8,
   },
-  resetButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
   backButton: {
-    alignSelf: 'center',
     marginTop: 16,
-  },
-  backButtonText: {
-    color: '#007AFF',
-    fontSize: 14,
+    alignSelf: 'center',
   },
 });
 

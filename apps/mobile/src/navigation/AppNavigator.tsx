@@ -2,6 +2,8 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useAuth } from '../hooks/useAuth';
+import { Loading } from '../components';
 
 // Import screens (will be created)
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -80,13 +82,16 @@ const MainNavigator = () => (
 );
 
 const AppNavigator: React.FC = () => {
-  // TODO: Add authentication state management
-  const isAuthenticated = false;
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <Loading fullScreen message="Loading..." />;
+  }
 
   return (
     <NavigationContainer>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {isAuthenticated ? (
+        {user ? (
           <RootStack.Screen name="Main" component={MainNavigator} />
         ) : (
           <RootStack.Screen name="Auth" component={AuthNavigator} />

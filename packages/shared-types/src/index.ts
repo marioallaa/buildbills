@@ -111,21 +111,26 @@ export interface UpdateInvoiceInput {
 /**
  * Expense Types
  */
-export type ExpenseCategory =
-  | 'Office Supplies'
-  | 'Travel & Transportation'
-  | 'Meals & Entertainment'
-  | 'Professional Services'
-  | 'Utilities'
-  | 'Rent/Lease'
-  | 'Insurance'
-  | 'Marketing & Advertising'
-  | 'Equipment & Tools'
-  | 'Materials & Supplies'
-  | 'Subcontractor Costs'
-  | 'Vehicle Expenses'
-  | 'Bank Fees'
-  | 'Other';
+
+// Expense categories as const for better type safety and maintainability
+export const EXPENSE_CATEGORIES = [
+  'Office Supplies',
+  'Travel & Transportation',
+  'Meals & Entertainment',
+  'Professional Services',
+  'Utilities',
+  'Rent/Lease',
+  'Insurance',
+  'Marketing & Advertising',
+  'Equipment & Tools',
+  'Materials & Supplies',
+  'Subcontractor Costs',
+  'Vehicle Expenses',
+  'Bank Fees',
+  'Other',
+] as const;
+
+export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number];
 
 export type PaymentMethod = 'cash' | 'card' | 'bank_transfer' | 'check' | 'other';
 

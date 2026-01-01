@@ -17,32 +17,38 @@ export const validateEmail = (email: string): boolean => {
 export const validatePassword = (password: string): {
   isValid: boolean;
   errors: string[];
+  warnings: string[];
 } => {
   const errors: string[] = [];
+  const warnings: string[] = [];
   
+  // Required validations
   if (password.length < 6) {
     errors.push('Password must be at least 6 characters');
+    return { isValid: false, errors, warnings }; // Return early if minimum not met
   }
   
+  // Optional security recommendations
   if (password.length < 8) {
-    errors.push('For better security, use at least 8 characters');
+    warnings.push('For better security, use at least 8 characters');
   }
   
   if (!/[A-Z]/.test(password)) {
-    errors.push('Include at least one uppercase letter');
+    warnings.push('Include at least one uppercase letter');
   }
   
   if (!/[a-z]/.test(password)) {
-    errors.push('Include at least one lowercase letter');
+    warnings.push('Include at least one lowercase letter');
   }
   
   if (!/[0-9]/.test(password)) {
-    errors.push('Include at least one number');
+    warnings.push('Include at least one number');
   }
   
   return {
-    isValid: errors.length === 0 || (errors.length === 1 && errors[0].includes('better security')),
+    isValid: errors.length === 0,
     errors,
+    warnings,
   };
 };
 

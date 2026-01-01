@@ -3,25 +3,10 @@
  * App-wide constants and configuration
  */
 
-import { ExpenseCategory, PaymentMethod } from '@buildbills/shared-types';
+import { EXPENSE_CATEGORIES, PaymentMethod } from '@buildbills/shared-types';
 
-// Expense categories as defined in shared types
-export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
-  'Office Supplies',
-  'Travel & Transportation',
-  'Meals & Entertainment',
-  'Professional Services',
-  'Utilities',
-  'Rent/Lease',
-  'Insurance',
-  'Marketing & Advertising',
-  'Equipment & Tools',
-  'Materials & Supplies',
-  'Subcontractor Costs',
-  'Vehicle Expenses',
-  'Bank Fees',
-  'Other',
-];
+// Export expense categories from shared types
+export { EXPENSE_CATEGORIES };
 
 // Payment methods
 export const PAYMENT_METHODS: PaymentMethod[] = [

@@ -2,15 +2,22 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  TouchableOpacity,
   Alert,
+  Modal,
+  TouchableOpacity,
+  FlatList,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ExpenseStackParamList } from '../../navigation/AppNavigator';
+import { useData } from '../../hooks/useData';
+import { Button, Input } from '../../components';
+import { colors } from '../../theme';
+import { validateRequired, validateAmount } from '../../utils/validators';
+import { EXPENSE_CATEGORIES } from '../../constants';
+import { ExpenseCategory } from '@buildbills/shared-types';
 
 type ExpenseCreateScreenNavigationProp = NativeStackNavigationProp<
   ExpenseStackParamList,
@@ -22,86 +29,189 @@ interface Props {
 }
 
 const ExpenseCreateScreen: React.FC<Props> = ({ navigation }) => {
-  const [category, setCategory] = useState('');
+  const { createExpense } = useData();
+  const [loading, setLoading] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  
+  const [vendor, setVendor] = useState('');
+  const [category, setCategory] = useState<ExpenseCategory | ''>('');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [taxDeductible, setTaxDeductible] = useState(false);
+  
+  const [vendorError, setVendorError] = useState('');
+  const [categoryError, setCategoryError] = useState('');
+  const [amountError, setAmountError] = useState('');
+
+  const validateForm = (): boolean => {
+    let isValid = true;
+    
+    setVendorError('');
+    setCategoryError('');
+    setAmountError('');
+
+    const vendorErr = validateRequired(vendor, 'Vendor/Merchant');
+    if (vendorErr) {
+      setVendorError(vendorErr);
+      isValid = false;
+    }
+
+    if (!category) {
+      setCategoryError('Category is required');
+      isValid = false;
+    }
+
+    const amtError = validateAmount(amount);
+    if (amtError) {
+      setAmountError(amtError);
+      isValid = false;
+    } else if (parseFloat(amount) === 0) {
+      setAmountError('Amount must be greater than 0');
+      isValid = false;
+    }
+
+    return isValid;
+  };
 
   const handleCreate = async () => {
-    if (!category || !amount) {
-      Alert.alert('Error', 'Please fill in required fields');
+    if (!validateForm()) {
       return;
     }
 
     setLoading(true);
     try {
-      // TODO: Implement Firebase expense creation
-      console.log('Create expense:', { category, amount, description });
+      await createExpense({
+        vendor: vendor.trim(),
+        category: category as ExpenseCategory,
+        amount: parseFloat(amount),
+        description: description.trim() || undefined,
+        date: new Date(),
+        taxDeductible,
+      });
+      
       Alert.alert('Success', 'Expense added successfully', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to add expense');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to add expense');
     } finally {
       setLoading(false);
     }
   };
 
+  const selectCategory = (cat: ExpenseCategory) => {
+    setCategory(cat);
+    setShowCategoryPicker(false);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.label}>Category *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g., Materials, Labor, Travel"
-          placeholderTextColor="#999"
-          value={category}
-          onChangeText={setCategory}
+        <Text style={styles.sectionTitle}>Expense Information</Text>
+        
+        <Input
+          label="Vendor/Merchant *"
+          placeholder="Enter vendor name"
+          value={vendor}
+          onChangeText={setVendor}
+          error={vendorError}
+          editable={!loading}
         />
 
-        <Text style={styles.label}>Amount *</Text>
-        <TextInput
-          style={styles.input}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Category *</Text>
+          <TouchableOpacity
+            style={[styles.categorySelector, categoryError && styles.categoryError]}
+            onPress={() => setShowCategoryPicker(true)}
+            disabled={loading}>
+            <Text style={[styles.categorySelectorText, !category && styles.placeholder]}>
+              {category || 'Select a category'}
+            </Text>
+            <Text style={styles.arrow}>›</Text>
+          </TouchableOpacity>
+          {categoryError && <Text style={styles.errorText}>{categoryError}</Text>}
+        </View>
+
+        <Input
+          label="Amount *"
           placeholder="0.00"
-          placeholderTextColor="#999"
           value={amount}
           onChangeText={setAmount}
           keyboardType="decimal-pad"
+          error={amountError}
+          editable={!loading}
         />
 
-        <Text style={styles.label}>Description</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Expense description"
-          placeholderTextColor="#999"
+        <Input
+          label="Description"
+          placeholder="Add notes or description"
           value={description}
           onChangeText={setDescription}
           multiline
-          numberOfLines={4}
-          textAlignVertical="top"
+          numberOfLines={3}
+          style={styles.textArea}
+          editable={!loading}
         />
 
         <TouchableOpacity
-          style={styles.createButton}
-          onPress={handleCreate}
+          style={styles.taxToggle}
+          onPress={() => setTaxDeductible(!taxDeductible)}
           disabled={loading}>
-          <Text style={styles.createButtonText}>
-            {loading ? 'Adding...' : 'Add Expense'}
-          </Text>
+          <View style={[styles.checkbox, taxDeductible && styles.checkboxChecked]}>
+            {taxDeductible && <Text style={styles.checkmark}>✓</Text>}
+          </View>
+          <Text style={styles.taxLabel}>Tax Deductible</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
+        <Button
+          title="Add Expense"
+          onPress={handleCreate}
+          disabled={loading}
+          loading={loading}
+          fullWidth
+          style={styles.createButton}
+        />
+
+        <Button
+          title="Scan Receipt (Coming Soon)"
+          onPress={() => Alert.alert('Info', 'Receipt scanning coming soon')}
+          variant="outline"
+          fullWidth
           style={styles.scanButton}
-          onPress={() => Alert.alert('Info', 'Camera integration coming soon')}>
-          <Text style={styles.scanButtonText}>Scan Receipt</Text>
-        </TouchableOpacity>
-
-        <View style={styles.infoBox}>
-          <Text style={styles.infoText}>
-            💡 Tip: Use the "Scan Receipt" feature to automatically extract expense details from photos.
-          </Text>
-        </View>
+          disabled={loading}
+        />
       </ScrollView>
+
+      <Modal
+        visible={showCategoryPicker}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowCategoryPicker(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Category</Text>
+              <TouchableOpacity onPress={() => setShowCategoryPicker(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={EXPENSE_CATEGORIES}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.categoryItem}
+                  onPress={() => selectCategory(item)}>
+                  <Text style={styles.categoryItemText}>{item}</Text>
+                  {category === item && (
+                    <Text style={styles.selectedIndicator}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -109,68 +219,139 @@ const ExpenseCreateScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
   },
   scrollContent: {
     padding: 16,
   },
-  label: {
-    fontSize: 14,
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    color: colors.text,
+    marginBottom: 16,
     marginTop: 8,
   },
-  input: {
+  inputContainer: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text,
+    marginBottom: 6,
+  },
+  categorySelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
+    backgroundColor: colors.backgroundTertiary,
+  },
+  categoryError: {
+    borderColor: colors.error,
+  },
+  categorySelectorText: {
     fontSize: 16,
-    backgroundColor: '#fff',
-    marginBottom: 8,
+    color: colors.text,
+  },
+  placeholder: {
+    color: colors.gray400,
+  },
+  arrow: {
+    fontSize: 20,
+    color: colors.textTertiary,
+  },
+  errorText: {
+    fontSize: 12,
+    color: colors.error,
+    marginTop: 4,
   },
   textArea: {
-    minHeight: 100,
+    minHeight: 80,
     paddingTop: 12,
   },
-  createButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingVertical: 14,
+  taxToggle: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 24,
+    marginBottom: 24,
   },
-  createButtonText: {
-    color: '#fff',
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: colors.border,
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  checkmark: {
+    color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
+  },
+  taxLabel: {
+    fontSize: 16,
+    color: colors.text,
+  },
+  createButton: {
+    marginTop: 8,
   },
   scanButton: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
     marginTop: 12,
   },
-  scanButtonText: {
-    color: '#007AFF',
-    fontSize: 16,
-    fontWeight: '600',
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  infoBox: {
-    backgroundColor: '#E8F4FD',
-    borderRadius: 8,
+  modalContent: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 16,
-    marginTop: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  infoText: {
-    fontSize: 14,
-    color: '#333',
-    lineHeight: 20,
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  modalClose: {
+    fontSize: 24,
+    color: colors.textSecondary,
+  },
+  categoryItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  categoryItemText: {
+    fontSize: 16,
+    color: colors.text,
+  },
+  selectedIndicator: {
+    fontSize: 20,
+    color: colors.primary,
+    fontWeight: 'bold',
   },
 });
 

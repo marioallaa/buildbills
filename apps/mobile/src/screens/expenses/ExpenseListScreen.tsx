@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,15 @@ import {
   SafeAreaView,
   FlatList,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ExpenseStackParamList } from '../../navigation/AppNavigator';
+import { useData } from '../../hooks/useData';
+import { Card, EmptyState, Loading, AmountDisplay, Button } from '../../components';
+import { colors } from '../../theme';
+import { formatDate } from '../../utils/formatters';
+import { Expense } from '@buildbills/shared-types';
 
 type ExpenseListScreenNavigationProp = NativeStackNavigationProp<
   ExpenseStackParamList,
@@ -20,45 +26,79 @@ interface Props {
 }
 
 const ExpenseListScreen: React.FC<Props> = ({ navigation }) => {
-  const expenses: any[] = []; // TODO: Load from Firebase
+  const { expenses, loadingExpenses, refreshExpenses } = useData();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refreshExpenses();
+    setRefreshing(false);
+  };
+
+  const renderExpenseCard = ({ item }: { item: Expense }) => (
+    <Card style={styles.expenseCard}>
+      <View style={styles.expenseHeader}>
+        <View style={styles.categoryContainer}>
+          <Text style={styles.category}>{item.category}</Text>
+          {item.taxDeductible && (
+            <View style={styles.taxBadge}>
+              <Text style={styles.taxBadgeText}>Tax Deductible</Text>
+            </View>
+          )}
+        </View>
+        <AmountDisplay amount={item.amount} type="negative" size="medium" />
+      </View>
+      
+      {item.vendor && <Text style={styles.vendor}>{item.vendor}</Text>}
+      {item.description && <Text style={styles.description}>{item.description}</Text>}
+      
+      <View style={styles.expenseFooter}>
+        <Text style={styles.date}>{formatDate(item.date)}</Text>
+        {item.receiptUrl && (
+          <Text style={styles.receiptIndicator}>📎 Receipt</Text>
+        )}
+      </View>
+    </Card>
+  );
+
+  if (loadingExpenses && expenses.length === 0) {
+    return <Loading fullScreen message="Loading expenses..." />;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={() => navigation.navigate('ExpenseCreate')}>
-          <Text style={styles.createButtonText}>+ Add Expense</Text>
-        </TouchableOpacity>
+        <Button
+          title="+ Add Expense"
+          onPress={() => navigation.navigate('ExpenseCreate')}
+          size="medium"
+        />
       </View>
 
       {expenses.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateText}>No expenses yet</Text>
-          <Text style={styles.emptyStateSubtext}>
-            Add your first expense to start tracking
-          </Text>
-          <TouchableOpacity
-            style={styles.emptyStateButton}
-            onPress={() => navigation.navigate('ExpenseCreate')}>
-            <Text style={styles.emptyStateButtonText}>Add Expense</Text>
-          </TouchableOpacity>
-        </View>
+        <EmptyState
+          title="No expenses yet"
+          message="Add your first expense to start tracking"
+          action={
+            <Button
+              title="Add Expense"
+              onPress={() => navigation.navigate('ExpenseCreate')}
+            />
+          }
+        />
       ) : (
         <FlatList
           data={expenses}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.expenseCard}>
-              <View style={styles.expenseHeader}>
-                <Text style={styles.expenseCategory}>{item.category}</Text>
-                <Text style={styles.expenseAmount}>${item.amount}</Text>
-              </View>
-              <Text style={styles.expenseDescription}>{item.description}</Text>
-              <Text style={styles.expenseDate}>{item.date}</Text>
-            </TouchableOpacity>
-          )}
+          renderItem={renderExpenseCard}
           contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary}
+            />
+          }
         />
       )}
     </SafeAreaView>
@@ -68,92 +108,70 @@ const ExpenseListScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
   },
   header: {
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  createButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-  },
-  createButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    borderBottomColor: colors.border,
   },
   listContent: {
     padding: 16,
   },
   expenseCard: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   expenseHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 8,
   },
-  expenseCategory: {
+  categoryContainer: {
+    flex: 1,
+    marginRight: 8,
+  },
+  category: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
-  },
-  expenseAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FF3B30',
-  },
-  expenseDescription: {
-    fontSize: 14,
-    color: '#666',
+    color: colors.text,
     marginBottom: 4,
   },
-  expenseDate: {
-    fontSize: 12,
-    color: '#999',
+  taxBadge: {
+    backgroundColor: `${colors.success}20`,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
   },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  emptyStateText: {
-    fontSize: 18,
+  taxBadgeText: {
+    fontSize: 10,
+    color: colors.success,
     fontWeight: '600',
-    color: '#333',
+  },
+  vendor: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  description: {
+    fontSize: 14,
+    color: colors.textSecondary,
     marginBottom: 8,
   },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 24,
+  expenseFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  emptyStateButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
+  date: {
+    fontSize: 12,
+    color: colors.textTertiary,
   },
-  emptyStateButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  receiptIndicator: {
+    fontSize: 12,
+    color: colors.primary,
   },
 });
 

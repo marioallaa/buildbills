@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,15 @@ import {
   SafeAreaView,
   FlatList,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { InvoiceStackParamList } from '../../navigation/AppNavigator';
+import { useData } from '../../hooks/useData';
+import { Card, EmptyState, Loading, StatusBadge, AmountDisplay, Button } from '../../components';
+import { colors } from '../../theme';
+import { formatDate } from '../../utils/formatters';
+import { Invoice } from '@buildbills/shared-types';
 
 type InvoiceListScreenNavigationProp = NativeStackNavigationProp<
   InvoiceStackParamList,
@@ -20,45 +26,77 @@ interface Props {
 }
 
 const InvoiceListScreen: React.FC<Props> = ({ navigation }) => {
-  const invoices: any[] = []; // TODO: Load from Firebase
+  const { invoices, loadingInvoices, refreshInvoices } = useData();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refreshInvoices();
+    setRefreshing(false);
+  };
+
+  const renderInvoiceCard = ({ item }: { item: Invoice }) => (
+    <Card style={styles.invoiceCard}>
+      <View style={styles.invoiceHeader}>
+        <Text style={styles.invoiceNumber}>{item.invoiceNumber}</Text>
+        <StatusBadge status={item.status} />
+      </View>
+      
+      <Text style={styles.clientName}>{item.clientName}</Text>
+      
+      <View style={styles.invoiceFooter}>
+        <View>
+          <Text style={styles.label}>Amount</Text>
+          <AmountDisplay amount={item.amount} size="medium" />
+        </View>
+        {item.dueDate && (
+          <View>
+            <Text style={styles.label}>Due</Text>
+            <Text style={styles.dueDate}>{formatDate(item.dueDate)}</Text>
+          </View>
+        )}
+      </View>
+    </Card>
+  );
+
+  if (loadingInvoices && invoices.length === 0) {
+    return <Loading fullScreen message="Loading invoices..." />;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={() => navigation.navigate('InvoiceCreate')}>
-          <Text style={styles.createButtonText}>+ New Invoice</Text>
-        </TouchableOpacity>
+        <Button
+          title="+ New Invoice"
+          onPress={() => navigation.navigate('InvoiceCreate')}
+          size="medium"
+        />
       </View>
 
       {invoices.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateText}>No invoices yet</Text>
-          <Text style={styles.emptyStateSubtext}>
-            Create your first invoice to get started
-          </Text>
-          <TouchableOpacity
-            style={styles.emptyStateButton}
-            onPress={() => navigation.navigate('InvoiceCreate')}>
-            <Text style={styles.emptyStateButtonText}>Create Invoice</Text>
-          </TouchableOpacity>
-        </View>
+        <EmptyState
+          title="No invoices yet"
+          message="Create your first invoice to get started"
+          action={
+            <Button
+              title="Create Invoice"
+              onPress={() => navigation.navigate('InvoiceCreate')}
+            />
+          }
+        />
       ) : (
         <FlatList
           data={invoices}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.invoiceCard}>
-              <View style={styles.invoiceHeader}>
-                <Text style={styles.invoiceNumber}>{item.number}</Text>
-                <Text style={styles.invoiceAmount}>${item.amount}</Text>
-              </View>
-              <Text style={styles.invoiceClient}>{item.clientName}</Text>
-              <Text style={styles.invoiceDate}>{item.date}</Text>
-            </TouchableOpacity>
-          )}
+          renderItem={renderInvoiceCard}
           contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary}
+            />
+          }
         />
       )}
     </SafeAreaView>
@@ -68,92 +106,49 @@ const InvoiceListScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
   },
   header: {
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  createButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-  },
-  createButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    borderBottomColor: colors.border,
   },
   listContent: {
     padding: 16,
   },
   invoiceCard: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   invoiceHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
   invoiceNumber: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
   },
-  invoiceAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#007AFF',
-  },
-  invoiceClient: {
+  clientName: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
+    marginBottom: 12,
+  },
+  invoiceFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  label: {
+    fontSize: 12,
+    color: colors.textTertiary,
     marginBottom: 4,
   },
-  invoiceDate: {
-    fontSize: 12,
-    color: '#999',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  emptyStateText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  emptyStateSubtext: {
+  dueDate: {
     fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  emptyStateButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-  },
-  emptyStateButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.text,
   },
 });
 

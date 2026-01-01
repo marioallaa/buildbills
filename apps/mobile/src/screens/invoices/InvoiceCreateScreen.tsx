@@ -2,15 +2,17 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  TouchableOpacity,
   Alert,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { InvoiceStackParamList } from '../../navigation/AppNavigator';
+import { useData } from '../../hooks/useData';
+import { Button, Input } from '../../components';
+import { colors } from '../../theme';
+import { validateRequired, validateEmail, validateAmount } from '../../utils/validators';
 
 type InvoiceCreateScreenNavigationProp = NativeStackNavigationProp<
   InvoiceStackParamList,
@@ -22,27 +24,72 @@ interface Props {
 }
 
 const InvoiceCreateScreen: React.FC<Props> = ({ navigation }) => {
+  const { createInvoice } = useData();
+  const [loading, setLoading] = useState(false);
+  
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [loading, setLoading] = useState(false);
+  
+  const [clientNameError, setClientNameError] = useState('');
+  const [clientEmailError, setClientEmailError] = useState('');
+  const [amountError, setAmountError] = useState('');
+
+  const validateForm = (): boolean => {
+    let isValid = true;
+    
+    // Reset errors
+    setClientNameError('');
+    setClientEmailError('');
+    setAmountError('');
+
+    // Client name validation
+    const nameError = validateRequired(clientName, 'Client name');
+    if (nameError) {
+      setClientNameError(nameError);
+      isValid = false;
+    }
+
+    // Email validation (optional but must be valid if provided)
+    if (clientEmail && !validateEmail(clientEmail)) {
+      setClientEmailError('Please enter a valid email');
+      isValid = false;
+    }
+
+    // Amount validation
+    const amtError = validateAmount(amount);
+    if (amtError) {
+      setAmountError(amtError);
+      isValid = false;
+    } else if (parseFloat(amount) === 0) {
+      setAmountError('Amount must be greater than 0');
+      isValid = false;
+    }
+
+    return isValid;
+  };
 
   const handleCreate = async () => {
-    if (!clientName || !amount) {
-      Alert.alert('Error', 'Please fill in required fields');
+    if (!validateForm()) {
       return;
     }
 
     setLoading(true);
     try {
-      // TODO: Implement Firebase invoice creation
-      console.log('Create invoice:', { clientName, clientEmail, amount, description });
+      await createInvoice({
+        clientName: clientName.trim(),
+        clientEmail: clientEmail.trim() || undefined,
+        amount: parseFloat(amount),
+        description: description.trim() || undefined,
+        issueDate: new Date(),
+      });
+      
       Alert.alert('Success', 'Invoice created successfully', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to create invoice');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to create invoice');
     } finally {
       setLoading(false);
     }
@@ -51,62 +98,68 @@ const InvoiceCreateScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.label}>Client Name *</Text>
-        <TextInput
-          style={styles.input}
+        <Text style={styles.sectionTitle}>Client Information</Text>
+        
+        <Input
+          label="Client Name *"
           placeholder="Enter client name"
-          placeholderTextColor="#999"
           value={clientName}
           onChangeText={setClientName}
+          error={clientNameError}
+          editable={!loading}
         />
 
-        <Text style={styles.label}>Client Email</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter client email"
-          placeholderTextColor="#999"
+        <Input
+          label="Client Email"
+          placeholder="client@example.com"
           value={clientEmail}
           onChangeText={setClientEmail}
           keyboardType="email-address"
           autoCapitalize="none"
+          error={clientEmailError}
+          editable={!loading}
         />
 
-        <Text style={styles.label}>Amount *</Text>
-        <TextInput
-          style={styles.input}
+        <Text style={styles.sectionTitle}>Invoice Details</Text>
+
+        <Input
+          label="Amount *"
           placeholder="0.00"
-          placeholderTextColor="#999"
           value={amount}
           onChangeText={setAmount}
           keyboardType="decimal-pad"
+          error={amountError}
+          editable={!loading}
         />
 
-        <Text style={styles.label}>Description</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Invoice description"
-          placeholderTextColor="#999"
+        <Input
+          label="Description"
+          placeholder="Invoice description or notes"
           value={description}
           onChangeText={setDescription}
           multiline
           numberOfLines={4}
-          textAlignVertical="top"
+          style={styles.textArea}
+          editable={!loading}
         />
 
-        <TouchableOpacity
-          style={styles.createButton}
+        <Button
+          title="Create Invoice"
           onPress={handleCreate}
-          disabled={loading}>
-          <Text style={styles.createButtonText}>
-            {loading ? 'Creating...' : 'Create Invoice'}
-          </Text>
-        </TouchableOpacity>
+          disabled={loading}
+          loading={loading}
+          fullWidth
+          style={styles.createButton}
+        />
 
-        <TouchableOpacity
+        <Button
+          title="Scan Invoice (Coming Soon)"
+          onPress={() => Alert.alert('Info', 'Camera integration coming soon')}
+          variant="outline"
+          fullWidth
           style={styles.scanButton}
-          onPress={() => Alert.alert('Info', 'Camera integration coming soon')}>
-          <Text style={styles.scanButtonText}>Scan Invoice</Text>
-        </TouchableOpacity>
+          disabled={loading}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -115,57 +168,27 @@ const InvoiceCreateScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
   },
   scrollContent: {
     padding: 16,
   },
-  label: {
-    fontSize: 14,
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    color: colors.text,
+    marginBottom: 16,
     marginTop: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-    marginBottom: 8,
   },
   textArea: {
     minHeight: 100,
     paddingTop: 12,
   },
   createButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
     marginTop: 24,
   },
-  createButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
   scanButton: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
     marginTop: 12,
-  },
-  scanButtonText: {
-    color: '#007AFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
 

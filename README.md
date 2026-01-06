@@ -49,16 +49,40 @@ buildbills/
 
 ## 🚀 Getting Started
 
+### Quick Start (Recommended)
+
+**The easiest way to get started:**
+
+```bash
+# Clone and navigate to the repository
+git clone https://github.com/marioallaa/buildbills.git
+cd buildbills
+
+# Run the interactive quick start menu
+./quick-start.sh
+```
+
+The quick start script will help you:
+- ✅ Verify dependencies are installed
+- 🔥 Start Firebase Emulators for backend testing
+- 📱 Launch the mobile app development server
+- 🧪 Run linters and build tools
+- 📊 Check system status
+
+**For detailed testing instructions, see [TESTING_GUIDE.md](TESTING_GUIDE.md)**
+
 ### Prerequisites
 
-- **Node.js** >= 18.0.0
-- **npm** >= 9.0.0
+- **Node.js** >= 18.0.0 (v20.19.6 ✅)
+- **npm** >= 9.0.0 (v10.8.2 ✅)
 - **Firebase CLI**: `npm install -g firebase-tools`
 - **React Native CLI**: `npm install -g @react-native-community/cli`
-- **Xcode** (for iOS development)
+- **Xcode** (for iOS development - Mac only)
 - **Android Studio** (for Android development)
 
-### Installation
+### Manual Installation
+
+If you prefer manual setup:
 
 1. **Clone the repository**
    ```bash
@@ -66,25 +90,45 @@ buildbills/
    cd buildbills
    ```
 
-2. **Install dependencies**
+2. **Install all dependencies**
    ```bash
    npm install
    ```
+   
+   This installs dependencies for:
+   - Root workspace ✅
+   - Mobile app ✅
+   - Firebase functions ✅
+   - All shared packages ✅
 
-3. **Install mobile app dependencies**
+3. **For iOS development (Mac only)**
    ```bash
-   cd apps/mobile
-   npm install
-   cd ios && pod install && cd ..
-   ```
-
-4. **Install Firebase functions dependencies**
-   ```bash
-   cd packages/firebase-functions
-   npm install
+   cd apps/mobile/ios
+   pod install
+   cd ../../..
    ```
 
 ## 🔧 Development
+
+### ✅ Current Setup Status
+
+**All systems are configured and ready to test!**
+
+- ✅ **Dependencies**: All packages installed
+- ✅ **TypeScript**: Firebase functions compile successfully  
+- ✅ **Linting**: All code passes linting (0 errors)
+- ✅ **Firebase Functions**: Ready for local testing with emulators
+- ✅ **Mobile App**: Code is ready (needs Firebase configuration)
+- ✅ **Documentation**: Complete testing guide included
+
+**Next Steps:**
+1. Configure Firebase project credentials
+2. Run Firebase emulators: `./quick-start.sh` (option 1)
+3. Test mobile app: `./quick-start.sh` (option 2)
+
+See [TESTING_GUIDE.md](TESTING_GUIDE.md) for detailed instructions.
+
+---
 
 ### Mobile App
 

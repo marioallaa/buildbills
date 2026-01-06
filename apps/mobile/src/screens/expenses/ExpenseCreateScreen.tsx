@@ -40,7 +40,7 @@ const ExpenseCreateScreen: React.FC<Props> = ({ navigation }) => {
       Alert.alert('Success', 'Expense added successfully', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to add expense');
     } finally {
       setLoading(false);

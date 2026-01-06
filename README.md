@@ -296,8 +296,16 @@ npm run deploy
 
 ### Website
 
-The static website in `packages/website/` can be deployed to:
-- GitHub Pages
+The static website in `packages/website/` is automatically deployed to GitHub Pages when changes are pushed to the main branch.
+
+**GitHub Pages Deployment:**
+The website is automatically deployed via GitHub Actions workflow (`.github/workflows/deploy-gh-pages.yml`):
+- Triggers on pushes to `main` branch (when website files change)
+- Can be manually triggered via workflow_dispatch
+- Deploys to: https://marioallaa.github.io/buildbills/ (or custom domain if configured)
+
+**Manual deployment to other platforms:**
+The static website can also be deployed to:
 - Netlify
 - Vercel
 - Firebase Hosting

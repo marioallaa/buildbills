@@ -1,4 +1,5 @@
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onObjectFinalized } from 'firebase-functions/v2/storage';
 import vision from '@google-cloud/vision';
 
 // Initialize Vision AI client
@@ -7,15 +8,15 @@ const visionClient = new vision.ImageAnnotatorClient();
 /**
  * Analyze an invoice image using Google Cloud Vision AI
  */
-export const analyzeInvoice = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const analyzeInvoice = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { imageUrl, imageBase64 } = data;
+  const { imageUrl, imageBase64 } = request.data;
 
   if (!imageUrl && !imageBase64) {
-    throw new functions.https.HttpsError('invalid-argument', 'Image URL or base64 data is required');
+    throw new HttpsError('invalid-argument', 'Image URL or base64 request.data is required');
   }
 
   try {
@@ -31,7 +32,7 @@ export const analyzeInvoice = functions.https.onCall(async (data, context) => {
     const textAnnotations = textResult.textAnnotations;
 
     if (!textAnnotations || textAnnotations.length === 0) {
-      throw new functions.https.HttpsError('not-found', 'No text found in image');
+      throw new HttpsError('not-found', 'No text found in image');
     }
 
     const fullText = textAnnotations[0].description || '';
@@ -46,22 +47,22 @@ export const analyzeInvoice = functions.https.onCall(async (data, context) => {
     };
   } catch (error) {
     console.error('Error analyzing invoice:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to analyze invoice');
+    throw new HttpsError('internal', 'Failed to analyze invoice');
   }
 });
 
 /**
  * Analyze a receipt image using Google Cloud Vision AI
  */
-export const analyzeReceipt = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const analyzeReceipt = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { imageUrl, imageBase64 } = data;
+  const { imageUrl, imageBase64 } = request.data;
 
   if (!imageUrl && !imageBase64) {
-    throw new functions.https.HttpsError('invalid-argument', 'Image URL or base64 data is required');
+    throw new HttpsError('invalid-argument', 'Image URL or base64 request.data is required');
   }
 
   try {
@@ -77,7 +78,7 @@ export const analyzeReceipt = functions.https.onCall(async (data, context) => {
     const textAnnotations = textResult.textAnnotations;
 
     if (!textAnnotations || textAnnotations.length === 0) {
-      throw new functions.https.HttpsError('not-found', 'No text found in image');
+      throw new HttpsError('not-found', 'No text found in image');
     }
 
     const fullText = textAnnotations[0].description || '';
@@ -92,16 +93,16 @@ export const analyzeReceipt = functions.https.onCall(async (data, context) => {
     };
   } catch (error) {
     console.error('Error analyzing receipt:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to analyze receipt');
+    throw new HttpsError('internal', 'Failed to analyze receipt');
   }
 });
 
 /**
  * Process an uploaded image and extract text
  */
-export const processUploadedImage = functions.storage.object().onFinalize(async (object) => {
-  const filePath = object.name;
-  const bucket = object.bucket;
+export const processUploadedImage = onObjectFinalized(async (event) => {
+  const filePath = event.data.name;
+  const bucket = event.data.bucket;
 
   if (!filePath) {
     console.log('No file path found');
@@ -109,7 +110,7 @@ export const processUploadedImage = functions.storage.object().onFinalize(async 
   }
 
   // Check if the file is an image
-  if (!object.contentType?.startsWith('image/')) {
+  if (!event.data.contentType?.startsWith('image/')) {
     console.log('File is not an image');
     return;
   }
@@ -134,14 +135,14 @@ export const processUploadedImage = functions.storage.object().onFinalize(async 
 
     const fullText = textAnnotations[0].description || '';
 
-    // Extract data based on folder
+    // Extract request.data based on folder
     const extractedData = filePath.includes('receipts/') 
       ? extractReceiptData(fullText)
       : extractInvoiceData(fullText);
 
-    console.log('Extracted data:', extractedData);
+    console.log('Extracted request.data:', extractedData);
 
-    // TODO: Store extracted data in Firestore
+    // TODO: Store extracted request.data in Firestore
     // This can be enhanced to automatically create expense/invoice records
 
     return extractedData;

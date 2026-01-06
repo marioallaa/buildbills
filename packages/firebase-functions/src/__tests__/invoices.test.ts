@@ -1,5 +1,4 @@
-import * as admin from 'firebase-admin';
-import * as test from 'firebase-functions-test';
+import test from 'firebase-functions-test';
 
 // Initialize test environment
 const testEnv = test();
@@ -79,8 +78,9 @@ describe('Invoice Functions', () => {
   let deleteInvoice: any;
   let listInvoices: any;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     // Import functions after mocking
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const functions = require('../functions/invoices');
     createInvoice = functions.createInvoice;
     getInvoice = functions.getInvoice;

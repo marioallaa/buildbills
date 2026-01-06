@@ -35,7 +35,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       // TODO: Implement Firebase authentication
       console.log('Login with:', email, password);
       Alert.alert('Success', 'Login functionality will be implemented with Firebase');
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Login failed');
     } finally {
       setLoading(false);

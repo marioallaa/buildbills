@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  View,
   Text,
   TextInput,
   StyleSheet,
@@ -41,7 +40,7 @@ const InvoiceCreateScreen: React.FC<Props> = ({ navigation }) => {
       Alert.alert('Success', 'Invoice created successfully', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to create invoice');
     } finally {
       setLoading(false);

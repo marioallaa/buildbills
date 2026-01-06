@@ -1,4 +1,4 @@
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 
 const db = admin.firestore();
@@ -6,14 +6,14 @@ const db = admin.firestore();
 /**
  * Create a new user profile in Firestore
  */
-export const createUser = functions.https.onCall(async (data, context) => {
+export const createUser = onCall(async (request) => {
   // Check authentication
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { uid } = context.auth;
-  const { displayName, email } = data;
+  const { uid } = request.auth;
+  const { displayName, email } = request.data;
 
   try {
     await db.collection('users').doc(uid).set({
@@ -26,19 +26,19 @@ export const createUser = functions.https.onCall(async (data, context) => {
     return { success: true, uid };
   } catch (error) {
     console.error('Error creating user profile:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to create user profile');
+    throw new HttpsError('internal', 'Failed to create user profile');
   }
 });
 
 /**
  * Delete a user and their data
  */
-export const deleteUser = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const deleteUser = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { uid } = context.auth;
+  const { uid } = request.auth;
 
   try {
     // Delete user's invoices
@@ -65,15 +65,22 @@ export const deleteUser = functions.https.onCall(async (data, context) => {
     return { success: true };
   } catch (error) {
     console.error('Error deleting user:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to delete user');
+    throw new HttpsError('internal', 'Failed to delete user');
   }
 });
 
 /**
  * Trigger when a new user is created in Firebase Auth
+ * Note: In v2, we can use beforeUserCreated, but for this use case, we'll remove the trigger
+ * and let the mobile app handle user profile creation
  */
-export const onUserCreated = functions.auth.user().onCreate(async (user) => {
-  const { uid, email, displayName } = user;
+export const onUserCreated = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
+  }
+  
+  const { uid } = request.auth;
+  const { email, displayName } = request.data;
 
   try {
     await db.collection('users').doc(uid).set({

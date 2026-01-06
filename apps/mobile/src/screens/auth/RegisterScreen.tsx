@@ -48,7 +48,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       // TODO: Implement Firebase authentication
       console.log('Register with:', name, email, password);
       Alert.alert('Success', 'Registration functionality will be implemented with Firebase');
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Registration failed');
     } finally {
       setLoading(false);

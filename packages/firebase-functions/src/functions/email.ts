@@ -1,5 +1,4 @@
-import * as functions from 'firebase-functions';
-import { google } from 'googleapis';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 
 const db = admin.firestore();
@@ -7,16 +6,16 @@ const db = admin.firestore();
 /**
  * Connect Gmail account using OAuth
  */
-export const connectGmail = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const connectGmail = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { uid } = context.auth;
-  const { accessToken, refreshToken } = data;
+  const { uid } = request.auth;
+  const { accessToken, refreshToken } = request.data;
 
   if (!accessToken || !refreshToken) {
-    throw new functions.https.HttpsError('invalid-argument', 'Access token and refresh token are required');
+    throw new HttpsError('invalid-argument', 'Access token and refresh token are required');
   }
 
   try {
@@ -32,23 +31,23 @@ export const connectGmail = functions.https.onCall(async (data, context) => {
     return { success: true, provider: 'gmail' };
   } catch (error) {
     console.error('Error connecting Gmail:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to connect Gmail');
+    throw new HttpsError('internal', 'Failed to connect Gmail');
   }
 });
 
 /**
  * Connect Outlook account using OAuth
  */
-export const connectOutlook = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const connectOutlook = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { uid } = context.auth;
-  const { accessToken, refreshToken } = data;
+  const { uid } = request.auth;
+  const { accessToken, refreshToken } = request.data;
 
   if (!accessToken || !refreshToken) {
-    throw new functions.https.HttpsError('invalid-argument', 'Access token and refresh token are required');
+    throw new HttpsError('invalid-argument', 'Access token and refresh token are required');
   }
 
   try {
@@ -63,37 +62,37 @@ export const connectOutlook = functions.https.onCall(async (data, context) => {
     return { success: true, provider: 'outlook' };
   } catch (error) {
     console.error('Error connecting Outlook:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to connect Outlook');
+    throw new HttpsError('internal', 'Failed to connect Outlook');
   }
 });
 
 /**
  * Sync emails and extract invoices/receipts
  */
-export const syncEmails = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const syncEmails = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { uid } = context.auth;
+  const { uid } = request.auth;
 
   try {
     // Get email connection
     const connectionDoc = await db.collection('emailConnections').doc(uid).get();
 
     if (!connectionDoc.exists) {
-      throw new functions.https.HttpsError('not-found', 'No email connection found');
+      throw new HttpsError('not-found', 'No email connection found');
     }
 
     const connection = connectionDoc.data();
-    const { provider, accessToken, refreshToken } = connection!;
+    const { provider, accessToken } = connection!;
 
     let emails: any[] = [];
 
     if (provider === 'gmail') {
-      emails = await fetchGmailMessages(accessToken, refreshToken);
+      emails = await fetchGmailMessages(accessToken);
     } else if (provider === 'outlook') {
-      emails = await fetchOutlookMessages(accessToken, refreshToken);
+      emails = await fetchOutlookMessages(accessToken);
     }
 
     // Process emails and extract invoices/receipts
@@ -106,23 +105,23 @@ export const syncEmails = functions.https.onCall(async (data, context) => {
     };
   } catch (error) {
     console.error('Error syncing emails:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to sync emails');
+    throw new HttpsError('internal', 'Failed to sync emails');
   }
 });
 
 /**
  * Extract invoices from email attachments
  */
-export const extractInvoicesFromEmail = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const extractInvoicesFromEmail = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { uid } = context.auth;
-  const { emailId } = data;
+  const { uid } = request.auth;
+  const { emailId } = request.data;
 
   if (!emailId) {
-    throw new functions.https.HttpsError('invalid-argument', 'Email ID is required');
+    throw new HttpsError('invalid-argument', 'Email ID is required');
   }
 
   try {
@@ -130,18 +129,18 @@ export const extractInvoicesFromEmail = functions.https.onCall(async (data, cont
     const connectionDoc = await db.collection('emailConnections').doc(uid).get();
 
     if (!connectionDoc.exists) {
-      throw new functions.https.HttpsError('not-found', 'No email connection found');
+      throw new HttpsError('not-found', 'No email connection found');
     }
 
     const connection = connectionDoc.data();
-    const { provider, accessToken, refreshToken } = connection!;
+    const { provider } = connection!;
 
     let attachments: any[] = [];
 
     if (provider === 'gmail') {
-      attachments = await fetchGmailAttachments(emailId, accessToken, refreshToken);
+      attachments = await fetchGmailAttachments(emailId);
     } else if (provider === 'outlook') {
-      attachments = await fetchOutlookAttachments(emailId, accessToken, refreshToken);
+      attachments = await fetchOutlookAttachments(emailId);
     }
 
     // Process attachments
@@ -162,14 +161,14 @@ export const extractInvoicesFromEmail = functions.https.onCall(async (data, cont
     };
   } catch (error) {
     console.error('Error extracting invoices from email:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to extract invoices');
+    throw new HttpsError('internal', 'Failed to extract invoices');
   }
 });
 
 /**
  * Fetch Gmail messages
  */
-async function fetchGmailMessages(accessToken: string, refreshToken: string): Promise<any[]> {
+async function fetchGmailMessages(accessToken: string): Promise<any[]> {
   // TODO: Implement Gmail API integration
   // This is a placeholder implementation
   console.log('Fetching Gmail messages with token:', accessToken);
@@ -186,7 +185,7 @@ async function fetchGmailMessages(accessToken: string, refreshToken: string): Pr
 /**
  * Fetch Outlook messages
  */
-async function fetchOutlookMessages(accessToken: string, refreshToken: string): Promise<any[]> {
+async function fetchOutlookMessages(accessToken: string): Promise<any[]> {
   // TODO: Implement Microsoft Graph API integration
   console.log('Fetching Outlook messages with token:', accessToken);
   return [];
@@ -195,7 +194,7 @@ async function fetchOutlookMessages(accessToken: string, refreshToken: string): 
 /**
  * Fetch Gmail attachments
  */
-async function fetchGmailAttachments(emailId: string, accessToken: string, refreshToken: string): Promise<any[]> {
+async function fetchGmailAttachments(emailId: string): Promise<any[]> {
   // TODO: Implement Gmail attachment fetching
   console.log('Fetching Gmail attachments for email:', emailId);
   return [];
@@ -204,7 +203,7 @@ async function fetchGmailAttachments(emailId: string, accessToken: string, refre
 /**
  * Fetch Outlook attachments
  */
-async function fetchOutlookAttachments(emailId: string, accessToken: string, refreshToken: string): Promise<any[]> {
+async function fetchOutlookAttachments(emailId: string): Promise<any[]> {
   // TODO: Implement Outlook attachment fetching
   console.log('Fetching Outlook attachments for email:', emailId);
   return [];

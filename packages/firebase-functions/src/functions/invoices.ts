@@ -1,4 +1,4 @@
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 
 const db = admin.firestore();
@@ -6,16 +6,16 @@ const db = admin.firestore();
 /**
  * Create a new invoice
  */
-export const createInvoice = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const createInvoice = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { uid } = context.auth;
-  const { clientName, clientEmail, amount, description, items, dueDate } = data;
+  const { uid } = request.auth;
+  const { clientName, clientEmail, amount, description, items, dueDate } = request.data;
 
   if (!clientName || !amount) {
-    throw new functions.https.HttpsError('invalid-argument', 'Missing required fields');
+    throw new HttpsError('invalid-argument', 'Missing required fields');
   }
 
   try {
@@ -36,57 +36,57 @@ export const createInvoice = functions.https.onCall(async (data, context) => {
     return { success: true, invoiceId: invoiceRef.id };
   } catch (error) {
     console.error('Error creating invoice:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to create invoice');
+    throw new HttpsError('internal', 'Failed to create invoice');
   }
 });
 
 /**
  * Get a single invoice by ID
  */
-export const getInvoice = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const getInvoice = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { invoiceId } = data;
-  const { uid } = context.auth;
+  const { invoiceId } = request.data;
+  const { uid } = request.auth;
 
   if (!invoiceId) {
-    throw new functions.https.HttpsError('invalid-argument', 'Invoice ID is required');
+    throw new HttpsError('invalid-argument', 'Invoice ID is required');
   }
 
   try {
     const invoiceDoc = await db.collection('invoices').doc(invoiceId).get();
 
     if (!invoiceDoc.exists) {
-      throw new functions.https.HttpsError('not-found', 'Invoice not found');
+      throw new HttpsError('not-found', 'Invoice not found');
     }
 
     const invoice = invoiceDoc.data();
     if (invoice?.userId !== uid) {
-      throw new functions.https.HttpsError('permission-denied', 'Access denied');
+      throw new HttpsError('permission-denied', 'Access denied');
     }
 
     return { ...invoice, id: invoiceDoc.id };
   } catch (error) {
     console.error('Error getting invoice:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to get invoice');
+    throw new HttpsError('internal', 'Failed to get invoice');
   }
 });
 
 /**
  * Update an invoice
  */
-export const updateInvoice = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const updateInvoice = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { invoiceId, ...updateData } = data;
-  const { uid } = context.auth;
+  const { invoiceId, ...updateData } = request.data;
+  const { uid } = request.auth;
 
   if (!invoiceId) {
-    throw new functions.https.HttpsError('invalid-argument', 'Invoice ID is required');
+    throw new HttpsError('invalid-argument', 'Invoice ID is required');
   }
 
   try {
@@ -94,12 +94,12 @@ export const updateInvoice = functions.https.onCall(async (data, context) => {
     const invoiceDoc = await invoiceRef.get();
 
     if (!invoiceDoc.exists) {
-      throw new functions.https.HttpsError('not-found', 'Invoice not found');
+      throw new HttpsError('not-found', 'Invoice not found');
     }
 
     const invoice = invoiceDoc.data();
     if (invoice?.userId !== uid) {
-      throw new functions.https.HttpsError('permission-denied', 'Access denied');
+      throw new HttpsError('permission-denied', 'Access denied');
     }
 
     await invoiceRef.update({
@@ -110,23 +110,23 @@ export const updateInvoice = functions.https.onCall(async (data, context) => {
     return { success: true };
   } catch (error) {
     console.error('Error updating invoice:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to update invoice');
+    throw new HttpsError('internal', 'Failed to update invoice');
   }
 });
 
 /**
  * Delete an invoice
  */
-export const deleteInvoice = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const deleteInvoice = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { invoiceId } = data;
-  const { uid } = context.auth;
+  const { invoiceId } = request.data;
+  const { uid } = request.auth;
 
   if (!invoiceId) {
-    throw new functions.https.HttpsError('invalid-argument', 'Invoice ID is required');
+    throw new HttpsError('invalid-argument', 'Invoice ID is required');
   }
 
   try {
@@ -134,12 +134,12 @@ export const deleteInvoice = functions.https.onCall(async (data, context) => {
     const invoiceDoc = await invoiceRef.get();
 
     if (!invoiceDoc.exists) {
-      throw new functions.https.HttpsError('not-found', 'Invoice not found');
+      throw new HttpsError('not-found', 'Invoice not found');
     }
 
     const invoice = invoiceDoc.data();
     if (invoice?.userId !== uid) {
-      throw new functions.https.HttpsError('permission-denied', 'Access denied');
+      throw new HttpsError('permission-denied', 'Access denied');
     }
 
     await invoiceRef.delete();
@@ -147,20 +147,20 @@ export const deleteInvoice = functions.https.onCall(async (data, context) => {
     return { success: true };
   } catch (error) {
     console.error('Error deleting invoice:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to delete invoice');
+    throw new HttpsError('internal', 'Failed to delete invoice');
   }
 });
 
 /**
  * List all invoices for a user
  */
-export const listInvoices = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const listInvoices = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { uid } = context.auth;
-  const { limit = 50, startAfter } = data;
+  const { uid } = request.auth;
+  const { limit = 50, startAfter } = request.data;
 
   try {
     let query = db.collection('invoices')
@@ -182,19 +182,19 @@ export const listInvoices = functions.https.onCall(async (data, context) => {
     return { invoices };
   } catch (error) {
     console.error('Error listing invoices:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to list invoices');
+    throw new HttpsError('internal', 'Failed to list invoices');
   }
 });
 
 /**
  * Get invoices by user (alternative method)
  */
-export const getInvoicesByUser = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const getInvoicesByUser = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { uid } = context.auth;
+  const { uid } = request.auth;
 
   try {
     const snapshot = await db.collection('invoices')
@@ -210,7 +210,7 @@ export const getInvoicesByUser = functions.https.onCall(async (data, context) =>
     return { invoices };
   } catch (error) {
     console.error('Error getting invoices by user:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to get invoices');
+    throw new HttpsError('internal', 'Failed to get invoices');
   }
 });
 

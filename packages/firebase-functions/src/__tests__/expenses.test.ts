@@ -1,22 +1,15 @@
-import * as admin from 'firebase-admin';
-import * as test from 'firebase-functions-test';
+import test from 'firebase-functions-test';
 
 const testEnv = test();
 
 describe('Expense Functions', () => {
   let createExpense: any;
   let getExpense: any;
-  let updateExpense: any;
-  let deleteExpense: any;
-  let listExpenses: any;
 
   beforeAll(() => {
     const functions = require('../functions/expenses');
     createExpense = functions.createExpense;
     getExpense = functions.getExpense;
-    updateExpense = functions.updateExpense;
-    deleteExpense = functions.deleteExpense;
-    listExpenses = functions.listExpenses;
   });
 
   afterAll(() => {

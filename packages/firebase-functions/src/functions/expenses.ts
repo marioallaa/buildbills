@@ -1,4 +1,4 @@
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 
 const db = admin.firestore();
@@ -6,16 +6,16 @@ const db = admin.firestore();
 /**
  * Create a new expense
  */
-export const createExpense = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const createExpense = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { uid } = context.auth;
-  const { category, amount, description, date, receiptUrl } = data;
+  const { uid } = request.auth;
+  const { category, amount, description, date, receiptUrl } = request.data;
 
   if (!category || !amount) {
-    throw new functions.https.HttpsError('invalid-argument', 'Missing required fields');
+    throw new HttpsError('invalid-argument', 'Missing required fields');
   }
 
   try {
@@ -33,57 +33,57 @@ export const createExpense = functions.https.onCall(async (data, context) => {
     return { success: true, expenseId: expenseRef.id };
   } catch (error) {
     console.error('Error creating expense:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to create expense');
+    throw new HttpsError('internal', 'Failed to create expense');
   }
 });
 
 /**
  * Get a single expense by ID
  */
-export const getExpense = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const getExpense = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { expenseId } = data;
-  const { uid } = context.auth;
+  const { expenseId } = request.data;
+  const { uid } = request.auth;
 
   if (!expenseId) {
-    throw new functions.https.HttpsError('invalid-argument', 'Expense ID is required');
+    throw new HttpsError('invalid-argument', 'Expense ID is required');
   }
 
   try {
     const expenseDoc = await db.collection('expenses').doc(expenseId).get();
 
     if (!expenseDoc.exists) {
-      throw new functions.https.HttpsError('not-found', 'Expense not found');
+      throw new HttpsError('not-found', 'Expense not found');
     }
 
     const expense = expenseDoc.data();
     if (expense?.userId !== uid) {
-      throw new functions.https.HttpsError('permission-denied', 'Access denied');
+      throw new HttpsError('permission-denied', 'Access denied');
     }
 
     return { ...expense, id: expenseDoc.id };
   } catch (error) {
     console.error('Error getting expense:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to get expense');
+    throw new HttpsError('internal', 'Failed to get expense');
   }
 });
 
 /**
  * Update an expense
  */
-export const updateExpense = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const updateExpense = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { expenseId, ...updateData } = data;
-  const { uid } = context.auth;
+  const { expenseId, ...updateData } = request.data;
+  const { uid } = request.auth;
 
   if (!expenseId) {
-    throw new functions.https.HttpsError('invalid-argument', 'Expense ID is required');
+    throw new HttpsError('invalid-argument', 'Expense ID is required');
   }
 
   try {
@@ -91,12 +91,12 @@ export const updateExpense = functions.https.onCall(async (data, context) => {
     const expenseDoc = await expenseRef.get();
 
     if (!expenseDoc.exists) {
-      throw new functions.https.HttpsError('not-found', 'Expense not found');
+      throw new HttpsError('not-found', 'Expense not found');
     }
 
     const expense = expenseDoc.data();
     if (expense?.userId !== uid) {
-      throw new functions.https.HttpsError('permission-denied', 'Access denied');
+      throw new HttpsError('permission-denied', 'Access denied');
     }
 
     await expenseRef.update({
@@ -107,23 +107,23 @@ export const updateExpense = functions.https.onCall(async (data, context) => {
     return { success: true };
   } catch (error) {
     console.error('Error updating expense:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to update expense');
+    throw new HttpsError('internal', 'Failed to update expense');
   }
 });
 
 /**
  * Delete an expense
  */
-export const deleteExpense = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const deleteExpense = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { expenseId } = data;
-  const { uid } = context.auth;
+  const { expenseId } = request.data;
+  const { uid } = request.auth;
 
   if (!expenseId) {
-    throw new functions.https.HttpsError('invalid-argument', 'Expense ID is required');
+    throw new HttpsError('invalid-argument', 'Expense ID is required');
   }
 
   try {
@@ -131,12 +131,12 @@ export const deleteExpense = functions.https.onCall(async (data, context) => {
     const expenseDoc = await expenseRef.get();
 
     if (!expenseDoc.exists) {
-      throw new functions.https.HttpsError('not-found', 'Expense not found');
+      throw new HttpsError('not-found', 'Expense not found');
     }
 
     const expense = expenseDoc.data();
     if (expense?.userId !== uid) {
-      throw new functions.https.HttpsError('permission-denied', 'Access denied');
+      throw new HttpsError('permission-denied', 'Access denied');
     }
 
     await expenseRef.delete();
@@ -144,20 +144,20 @@ export const deleteExpense = functions.https.onCall(async (data, context) => {
     return { success: true };
   } catch (error) {
     console.error('Error deleting expense:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to delete expense');
+    throw new HttpsError('internal', 'Failed to delete expense');
   }
 });
 
 /**
  * List all expenses for a user
  */
-export const listExpenses = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const listExpenses = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { uid } = context.auth;
-  const { limit = 50, startAfter } = data;
+  const { uid } = request.auth;
+  const { limit = 50, startAfter } = request.data;
 
   try {
     let query = db.collection('expenses')
@@ -179,19 +179,19 @@ export const listExpenses = functions.https.onCall(async (data, context) => {
     return { expenses };
   } catch (error) {
     console.error('Error listing expenses:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to list expenses');
+    throw new HttpsError('internal', 'Failed to list expenses');
   }
 });
 
 /**
  * Get expenses by user
  */
-export const getExpensesByUser = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const getExpensesByUser = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { uid } = context.auth;
+  const { uid } = request.auth;
 
   try {
     const snapshot = await db.collection('expenses')
@@ -207,7 +207,7 @@ export const getExpensesByUser = functions.https.onCall(async (data, context) =>
     return { expenses };
   } catch (error) {
     console.error('Error getting expenses by user:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to get expenses');
+    throw new HttpsError('internal', 'Failed to get expenses');
   }
 });
 

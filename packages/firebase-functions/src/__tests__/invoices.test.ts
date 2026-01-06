@@ -1,5 +1,4 @@
-import * as admin from 'firebase-admin';
-import * as test from 'firebase-functions-test';
+import test from 'firebase-functions-test';
 
 // Initialize test environment
 const testEnv = test();

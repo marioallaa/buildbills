@@ -1,5 +1,4 @@
-import * as functions from 'firebase-functions';
-import { google } from 'googleapis';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 
 const db = admin.firestore();
@@ -7,16 +6,16 @@ const db = admin.firestore();
 /**
  * Connect Gmail account using OAuth
  */
-export const connectGmail = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const connectGmail = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { uid } = context.auth;
-  const { accessToken, refreshToken } = data;
+  const { uid } = request.auth;
+  const { accessToken, refreshToken } = request.data;
 
   if (!accessToken || !refreshToken) {
-    throw new functions.https.HttpsError('invalid-argument', 'Access token and refresh token are required');
+    throw new HttpsError('invalid-argument', 'Access token and refresh token are required');
   }
 
   try {
@@ -32,23 +31,23 @@ export const connectGmail = functions.https.onCall(async (data, context) => {
     return { success: true, provider: 'gmail' };
   } catch (error) {
     console.error('Error connecting Gmail:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to connect Gmail');
+    throw new HttpsError('internal', 'Failed to connect Gmail');
   }
 });
 
 /**
  * Connect Outlook account using OAuth
  */
-export const connectOutlook = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const connectOutlook = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { uid } = context.auth;
-  const { accessToken, refreshToken } = data;
+  const { uid } = request.auth;
+  const { accessToken, refreshToken } = request.data;
 
   if (!accessToken || !refreshToken) {
-    throw new functions.https.HttpsError('invalid-argument', 'Access token and refresh token are required');
+    throw new HttpsError('invalid-argument', 'Access token and refresh token are required');
   }
 
   try {
@@ -63,26 +62,26 @@ export const connectOutlook = functions.https.onCall(async (data, context) => {
     return { success: true, provider: 'outlook' };
   } catch (error) {
     console.error('Error connecting Outlook:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to connect Outlook');
+    throw new HttpsError('internal', 'Failed to connect Outlook');
   }
 });
 
 /**
  * Sync emails and extract invoices/receipts
  */
-export const syncEmails = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const syncEmails = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { uid } = context.auth;
+  const { uid } = request.auth;
 
   try {
     // Get email connection
     const connectionDoc = await db.collection('emailConnections').doc(uid).get();
 
     if (!connectionDoc.exists) {
-      throw new functions.https.HttpsError('not-found', 'No email connection found');
+      throw new HttpsError('not-found', 'No email connection found');
     }
 
     const connection = connectionDoc.data();
@@ -106,23 +105,23 @@ export const syncEmails = functions.https.onCall(async (data, context) => {
     };
   } catch (error) {
     console.error('Error syncing emails:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to sync emails');
+    throw new HttpsError('internal', 'Failed to sync emails');
   }
 });
 
 /**
  * Extract invoices from email attachments
  */
-export const extractInvoicesFromEmail = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const extractInvoicesFromEmail = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { uid } = context.auth;
-  const { emailId } = data;
+  const { uid } = request.auth;
+  const { emailId } = request.data;
 
   if (!emailId) {
-    throw new functions.https.HttpsError('invalid-argument', 'Email ID is required');
+    throw new HttpsError('invalid-argument', 'Email ID is required');
   }
 
   try {
@@ -130,7 +129,7 @@ export const extractInvoicesFromEmail = functions.https.onCall(async (data, cont
     const connectionDoc = await db.collection('emailConnections').doc(uid).get();
 
     if (!connectionDoc.exists) {
-      throw new functions.https.HttpsError('not-found', 'No email connection found');
+      throw new HttpsError('not-found', 'No email connection found');
     }
 
     const connection = connectionDoc.data();
@@ -162,7 +161,7 @@ export const extractInvoicesFromEmail = functions.https.onCall(async (data, cont
     };
   } catch (error) {
     console.error('Error extracting invoices from email:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to extract invoices');
+    throw new HttpsError('internal', 'Failed to extract invoices');
   }
 });
 

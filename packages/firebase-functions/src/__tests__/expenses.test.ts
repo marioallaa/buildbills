@@ -6,7 +6,8 @@ describe('Expense Functions', () => {
   let createExpense: any;
   let getExpense: any;
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const functions = require('../functions/expenses');
     createExpense = functions.createExpense;
     getExpense = functions.getExpense;

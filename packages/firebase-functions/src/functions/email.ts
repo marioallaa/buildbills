@@ -85,14 +85,14 @@ export const syncEmails = onCall(async (request) => {
     }
 
     const connection = connectionDoc.data();
-    const { provider, accessToken, refreshToken } = connection!;
+    const { provider, accessToken } = connection!;
 
     let emails: any[] = [];
 
     if (provider === 'gmail') {
-      emails = await fetchGmailMessages(accessToken, refreshToken);
+      emails = await fetchGmailMessages(accessToken);
     } else if (provider === 'outlook') {
-      emails = await fetchOutlookMessages(accessToken, refreshToken);
+      emails = await fetchOutlookMessages(accessToken);
     }
 
     // Process emails and extract invoices/receipts
@@ -133,14 +133,14 @@ export const extractInvoicesFromEmail = onCall(async (request) => {
     }
 
     const connection = connectionDoc.data();
-    const { provider, accessToken, refreshToken } = connection!;
+    const { provider } = connection!;
 
     let attachments: any[] = [];
 
     if (provider === 'gmail') {
-      attachments = await fetchGmailAttachments(emailId, accessToken, refreshToken);
+      attachments = await fetchGmailAttachments(emailId);
     } else if (provider === 'outlook') {
-      attachments = await fetchOutlookAttachments(emailId, accessToken, refreshToken);
+      attachments = await fetchOutlookAttachments(emailId);
     }
 
     // Process attachments
@@ -168,7 +168,7 @@ export const extractInvoicesFromEmail = onCall(async (request) => {
 /**
  * Fetch Gmail messages
  */
-async function fetchGmailMessages(accessToken: string, refreshToken: string): Promise<any[]> {
+async function fetchGmailMessages(accessToken: string): Promise<any[]> {
   // TODO: Implement Gmail API integration
   // This is a placeholder implementation
   console.log('Fetching Gmail messages with token:', accessToken);
@@ -185,7 +185,7 @@ async function fetchGmailMessages(accessToken: string, refreshToken: string): Pr
 /**
  * Fetch Outlook messages
  */
-async function fetchOutlookMessages(accessToken: string, refreshToken: string): Promise<any[]> {
+async function fetchOutlookMessages(accessToken: string): Promise<any[]> {
   // TODO: Implement Microsoft Graph API integration
   console.log('Fetching Outlook messages with token:', accessToken);
   return [];
@@ -194,7 +194,7 @@ async function fetchOutlookMessages(accessToken: string, refreshToken: string): 
 /**
  * Fetch Gmail attachments
  */
-async function fetchGmailAttachments(emailId: string, accessToken: string, refreshToken: string): Promise<any[]> {
+async function fetchGmailAttachments(emailId: string): Promise<any[]> {
   // TODO: Implement Gmail attachment fetching
   console.log('Fetching Gmail attachments for email:', emailId);
   return [];
@@ -203,7 +203,7 @@ async function fetchGmailAttachments(emailId: string, accessToken: string, refre
 /**
  * Fetch Outlook attachments
  */
-async function fetchOutlookAttachments(emailId: string, accessToken: string, refreshToken: string): Promise<any[]> {
+async function fetchOutlookAttachments(emailId: string): Promise<any[]> {
   // TODO: Implement Outlook attachment fetching
   console.log('Fetching Outlook attachments for email:', emailId);
   return [];

@@ -172,16 +172,32 @@ Output files:
 
 ### GitHub Pages
 
+The website is automatically deployed to GitHub Pages via GitHub Actions workflow.
+
+**Automatic Deployment:**
+- The workflow (`.github/workflows/deploy-gh-pages.yml`) runs automatically when:
+  - Changes are pushed to `main` branch in `packages/website/`
+  - Manually triggered via GitHub Actions UI (workflow_dispatch)
+- Deployed site: https://marioallaa.github.io/buildbills/ (or custom domain if configured)
+- CNAME file is preserved for custom domain support (buildbills.alla.al)
+
+**Setup Requirements:**
+1. Enable GitHub Pages in repository settings:
+   - Go to Settings → Pages
+   - Source: GitHub Actions (recommended)
+2. Ensure workflow has proper permissions (already configured in workflow file)
+
+**Manual Deployment:**
 ```bash
 cd packages/website
 
-# Commit and push
+# Make changes to website files
+# Commit and push to main branch
 git add .
 git commit -m "Update website"
 git push origin main
 
-# Enable GitHub Pages in repository settings
-# Source: main branch / root or docs folder
+# Workflow will automatically deploy the changes
 ```
 
 ### Netlify
